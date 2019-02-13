@@ -33,6 +33,30 @@ class Rip(KikClientCallback):
 
     def on_group_message_received(self, chat_message: IncomingGroupChatMessage):
         ban_text = "Pepe and the fisher man says"
+
+        # The health check
+        if(chat_message.body.lower() == "rip"):
+            self.client.send_chat_message(chat_message.group_jid, "Ribs in peas")
+
+        # Help text
+        if(chat_message.body.lower() == "help"):
+            help_text = ":$ Commands of RIP :$\n\n\
+:$ \"RIP\" -> \"Ribs in peas\", for checking if the bot is up - \
+if not, Saku is probably on drunk and peed on the laptop which runs this bot, -or something  \n\n\
+:$ \"" + ban_text + "\" and i will kick your butt ...I mean for real. I will remove you from the group\
+ and try to ban you. (I can't do it if there is already 50 banned peeps) :$\n\n\
+:$ I will have something fancier later :$"
+            self.client.send_chat_message(chat_message.group_jid, help_text)
+
+        # Should we copy this feature from rage bot?
+        if" -> " in chat_message.body: self.client.send_chat_message(chat_message.group_jid, "Should I do also Trigger - Response? : $")
+
+        # For logging purpose
+        if "Last lurking activity:" in chat_message.body: print(chat_message.body)
+        if "saku" in chat_message.body.lower(): print(chat_message.body)
+
+        # The illegal phrase check
+        ban_text = "Pepe and the fisher man says"
         if "Pepe and the fisher man says".lower() in  chat_message.body.lower():
             self.client.remove_peer_from_group(chat_message.group_jid, chat_message.from_jid)
             self.client.ban_member_from_group(chat_message.group_jid, chat_message.from_jid)
