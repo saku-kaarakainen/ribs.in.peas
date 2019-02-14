@@ -38,22 +38,34 @@ class db_context:
     # TODO: How this works against SQL injections?
     def add_illegal_phrase(self, group_jid, phrase_text):
         # First, INSERT group if it does not exists in the database  
-        self._db_cursor.execute("SELECT gc.* FROM group_chat gc WHERE gc.group_jid = '{0}'".format(group_jid))
+        sql = "SELECT gc.* FROM group_chat gc WHERE gc.group_jid = '{0}'".format(group_jid)
+        print(sql)
+        self._db_cursor.execute(sql)
         exists_results = self._db_cursor.fetchall()
 
         if not exists_results or len(exists_results) == 0:
             print("Inserting new group '"+group_jid+"' to the database. The sql script:");
-            self._db_cursor.execute("INSERT INTO group_chat(group_jid) VALUES ({0})".format(group_jid))
-            self._db_cursor.fetchall()
+            sql = "INSERT INTO group_chat(group_jid) VALUES ('{0}')".format(group_jid)
+            self._db_cursor.execute(sql)
 
         # Yet before insert, fetch the row data, so we will know the id. 
         # This could be handled in an otherway, might be a bit slow solution?
         # Maybe you should use operations??
         #print("id: " + exists_results[0][0] + ", phrase_text: " + phrase_text)
-        exists_results = self._db_cursor.execute("SELECT gc.* FROM group_chat gc WHERE gc.group_jid = '{0}'".format(group_jid))
+        sql = "SELECT gc.* FROM group_chat gc WHERE gc.group_jid = '{0}'".format(group_jid)
+        print(sql)
+        exists_results = self._db_cursor.execute(sql)
         exists_results = self._db_cursor.fetchall()
-        self._db_cursor.execute("INSERT INTO group_chat_illegal_phrases(group_chat_id, phrase_text) VALUES ('{0}', '{1}')".format(exists_results[0][0], phrase_text))
+
+        sql = "INSERT INTO group_chat_illegal_phrases(group_chat_id, phrase_text) VALUES ('{0}', '{1}')".format(exists_results[0][0], phrase_text)
+        print(sql)
+        self._db_cursor.execute(sql)
 
     def __exit__(self, exception_type, exception_value, traceback):
+        if exception_type:
+            self._db_cursor.rollback()
+        else:
+            self._db_cursor.commit()
+
         self._db_cursor.close()
         self._db.close()
