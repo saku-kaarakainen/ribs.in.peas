@@ -1,14 +1,17 @@
 import json
-import pprint
+
 # kik_unofficial API
 from kik_unofficial.client import KikClient
 from kik_unofficial.callbacks import KikClientCallback
 from kik_unofficial.datatypes.xmpp.chatting import IncomingChatMessage, IncomingGroupChatMessage, IncomingStatusResponse, IncomingGroupStatus
 import kik_unofficial.datatypes.xmpp.chatting as chatting
 
+# local files
+from database import db_context
+
 # Fetch the credentials
-with open('../credentials.json') as f:
-    credentials = json.load(f)
+with open('../config.json') as f:
+    config = json.load(f)
 
 # Helper methods
 def dump(obj):
@@ -22,7 +25,7 @@ def jid_to_username(jid): return jid.split('@')[0][0:-4]
 # The main class
 class Rip(KikClientCallback):
     def __init__(self):
-        self.client = KikClient(self, credentials["username"], credentials["password"])
+        self.client = KikClient(self, config["credentials"]["kik-username"], config["credentials"]["kik-password"])
 
     def on_authenticated(self):
         self.client.request_roster()
@@ -32,35 +35,39 @@ class Rip(KikClientCallback):
         self.client.send_chat_message(chat_message.from_jid, "You said: " + chat_message.body)
 
     def on_group_message_received(self, chat_message: IncomingGroupChatMessage):
-        ban_text = "Pepe and the fisher man says"
 
         # The health check
         if(chat_message.body.lower() == "rip"):
             self.client.send_chat_message(chat_message.group_jid, "Ribs in peas")
+            return;
 
-        # Help text
-        if(chat_message.body.lower() == "help"):
-            help_text = ":$ Commands of RIP :$\n\n\
-:$ \"RIP\" -> \"Ribs in peas\", for checking if the bot is up - \
-if not, Saku is probably on drunk and peed on the laptop which runs this bot, -or something  \n\n\
-:$ \"" + ban_text + "\" and i will kick your butt ...I mean for real. I will remove you from the group\
- and try to ban you. (I can't do it if there is already 50 banned peeps) :$\n\n\
-:$ I will have something fancier later :$"
-            self.client.send_chat_message(chat_message.group_jid, help_text)
+        # TODO: Create a usage - test (similar than in rage)
 
         # Should we copy this feature from rage bot?
-        if" -> " in chat_message.body: self.client.send_chat_message(chat_message.group_jid, "Should I do also Trigger - Response? : $")
+        if " -> " in chat_message.body: self.client.send_chat_message(chat_message.group_jid, "Should I do also Trigger - Response? : $")
 
         # For logging purpose
-        if "Last lurking activity:" in chat_message.body: print(chat_message.body)
-        if "saku" in chat_message.body.lower(): print(chat_message.body)
+        else if "Last lurking activity:" in chat_message.body: print(chat_message.body)
+        else if "saku" in chat_message.body.lower(): print(chat_message.body)
 
-        # The illegal phrase check
-        ban_text = "Pepe and the fisher man says"
-        if "Pepe and the fisher man says".lower() in  chat_message.body.lower():
-            self.client.remove_peer_from_group(chat_message.group_jid, chat_message.from_jid)
-            self.client.ban_member_from_group(chat_message.group_jid, chat_message.from_jid)
-            self.client.send_chat_message(chat_message.group_jid, "Removed user with JID '" + chat_message.from_jid + "' because the user used an illegal phrase '" + ban_text + "' in the message.")
+        with db_context(config) as ctx:
+            phrases = ctx.list_illegal_phrases(chat_message.group_jid)
+
+            for phrase in phrases
+                if phrase in chat_message.body:
+                    print("Removing the user '{0}'. The message body matched with a phrase '{1}' The message:".format(chat_message.from_jid, phrase))
+                    print(chat_message.body)
+                    self.client.remove_peer_from_group(chat_message.group_jid, chat_message.from_jid)
+                    self.client.ban_member_from_group(chat_message.group_jid, chat_message.from_jid)
+                    self.client.send_chat_message(chat_message.group_jid, "Removed user with JID '{0}' because the user used an illegal phrase '{1}' in the message.".format(chat_message.from_jid, ban_text))
+                    return
+
+            if chat_message.body == "list phrases":
+                self.client.send_chat_message(chat_message.group_jid, , ", ".join(phrases))
+            else  if chat_message.body.startsWith("Add phrase")
+                phrase = chat_message.body[10:]
+                ctx.add_illegal_phrases(chat_message.group_jid, phrase)
+                self.client.send_chat_message(chat_message.group_jid, , "A new phrase added: " + phrase)
 
 # Main
 bot = Rip()
